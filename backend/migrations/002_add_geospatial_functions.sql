@@ -12,7 +12,7 @@ CREATE OR REPLACE FUNCTION alerts_within_radius(
 )
 RETURNS TABLE (
   alert_id          VARCHAR(50),
-  timestamp         TIMESTAMPTZ,
+  "timestamp"       TIMESTAMPTZ,
   status            alert_status,
   risk_level        risk_level,
   lat               DOUBLE PRECISION,
