@@ -63,7 +63,7 @@ HARDWARE_SECRET_TOKEN=your-hardware-token
 - Go to [Google Cloud Console](https://console.cloud.google.com)
 - Create new project
 - Enable "Maps JavaScript API"
-- Create API key
+- Create API key  
 - Set restrictions to "Web"
 - Add allowed domains:
   - `localhost:3000`
