@@ -62,14 +62,14 @@ class LifeTapWsServer {
     // Start keep-alive ping interval
     this.heartbeatInterval = setInterval(() => {
       this.pingClients();
-    }, config.websocket.heartbeatIntervalMs);
+    }, 30000);
 
     logger.info('WebSocket server initialized');
   }
 
   private handleMessage(ws: AuthenticatedClient, rawData: Buffer): void {
     try {
-      const message = JSON.parse(rawData.toString()) as WsMessage;
+      const message = JSON.parse(rawData.toString()) as WsMessage<{ token?: string }>;
 
       if (message.type === 'authenticate') {
         this.handleAuthentication(ws, message);
@@ -105,7 +105,7 @@ class LifeTapWsServer {
     }
 
     try {
-      const payload = jwt.verify(token, config.auth.jwtSecret) as JwtPayload;
+      const payload = jwt.verify(token, config.JWT_SECRET) as JwtPayload;
 
       if (payload.type !== 'access') {
         throw new Error('Invalid token type');
