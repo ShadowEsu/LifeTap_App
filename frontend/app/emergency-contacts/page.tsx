@@ -22,14 +22,14 @@ export default function EmergencyContactsPage() {
 
   useEffect(() => {
     loadContacts();
-  }, [router]);
+  }, []);
 
   const loadContacts = async () => {
     try {
       const response = await contactsAPI.getAll();
-      setContacts(response.data);
-    } catch (error) {
-      toast.error('Failed to load contacts');
+      setContacts(response.data ?? []);
+    } catch {
+      setContacts([]);
     } finally {
       setLoading(false);
     }

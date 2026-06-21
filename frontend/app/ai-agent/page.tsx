@@ -18,8 +18,7 @@ export default function AIAgentPage() {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-  }, [router]);
+  useEffect(() => {}, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -109,8 +108,7 @@ export default function AIAgentPage() {
               {messages.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-center">
                   <div>
-                    <div className="text-5xl mb-4">🤖</div>
-                    <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                      <h2 className="text-2xl font-semibold text-gray-900 mb-2">
                       Ask your safety questions
                     </h2>
                     <p className="text-gray-600">
@@ -127,14 +125,14 @@ export default function AIAgentPage() {
                     <div
                       className={`max-w-md px-4 py-3 rounded-lg ${
                         message.role === 'user'
-                          ? 'bg-gradient-blue text-white'
+                          ? 'bg-gray-900 text-white'
                           : 'bg-gray-100 text-gray-900'
                       }`}
                     >
                       <p className="text-sm">{message.content}</p>
                       <p className={`text-xs mt-1 ${
-                        message.role === 'user' 
-                          ? 'text-blue-100' 
+                        message.role === 'user'
+                          ? 'text-gray-400'
                           : 'text-gray-500'
                       }`}>
                         {message.timestamp.toLocaleTimeString()}
