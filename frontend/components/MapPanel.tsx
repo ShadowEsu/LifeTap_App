@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
-import toast from 'react-hot-toast';
 
 interface MapPanelProps {
   onLocationSelect: (location: { lat: number; lng: number; address?: string }) => void;
@@ -12,159 +11,114 @@ export default function MapPanel({ onLocationSelect }: MapPanelProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
-  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const initMap = async () => {
-      try {
-        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-        if (!apiKey) {
-          toast.error('Google Maps API key not configured');
-          setLoading(false);
-          return;
-        }
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) { setError('Maps API key missing'); setLoading(false); return; }
 
-        const loader = new Loader({
-          apiKey: apiKey,
-          version: 'weekly',
-        });
+    const loader = new Loader({ apiKey, version: 'weekly' });
 
-        const { Map } = await loader.importLibrary('maps');
+    loader.importLibrary('maps').then(({ Map }) => {
+      if (!mapRef.current) return;
+      const map = new Map(mapRef.current, {
+        zoom: 14,
+        center: { lat: 37.86914, lng: -122.26003 },
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        styles: [
+          { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+          { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+        ],
+      });
+      mapInstanceRef.current = map;
 
-        if (!mapRef.current) return;
+      // Alert marker
+      markerRef.current = new google.maps.Marker({
+        position: { lat: 37.86914, lng: -122.26003 },
+        map,
+        title: 'LifeTap Alert',
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#ef4444',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2.5,
+        },
+      });
 
-        mapInstanceRef.current = new Map(mapRef.current, {
-          zoom: 12,
-          center: { lat: 37.86914, lng: -122.26003 },
-        });
+      map.addListener('click', (e: google.maps.MapMouseEvent) => {
+        if (!e.latLng) return;
+        const pos = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        markerRef.current?.setPosition(pos);
+        onLocationSelect(pos);
+      });
 
-        // Show example alert location
-        new google.maps.Marker({
-          position: { lat: 37.86914, lng: -122.26003 },
-          map: mapInstanceRef.current,
-          title: 'LifeTap Alert',
-        });
-        onLocationSelect({ lat: 37.86914, lng: -122.26003 });
-
-        // Get user's location
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const { latitude, longitude } = position.coords;
-              const userLocation = { lat: latitude, lng: longitude };
-              mapInstanceRef.current?.setCenter(userLocation);
-              
-              // Add marker
-              if (mapInstanceRef.current) {
-                markerRef.current = new google.maps.Marker({
-                  position: userLocation,
-                  map: mapInstanceRef.current,
-                  title: 'Your Location',
-                });
-              }
-              
-              onLocationSelect(userLocation);
-            },
-            (error) => {
-              console.warn('Geolocation error:', error);
-            }
-          );
-        }
-
-        // Map click handler
-        mapInstanceRef.current.addListener('click', (event: google.maps.MapMouseEvent) => {
-          if (event.latLng) {
-            const location = {
-              lat: event.latLng.lat(),
-              lng: event.latLng.lng(),
-            };
-            onLocationSelect(location);
-            
-            if (markerRef.current) {
-              markerRef.current.setPosition(event.latLng);
-            } else {
-              markerRef.current = new google.maps.Marker({
-                position: event.latLng,
-                map: mapInstanceRef.current,
-                title: 'Selected Location',
-              });
-            }
-          }
-        });
-
-        setLoading(false);
-      } catch (error) {
-        console.error('Map initialization error:', error);
-        toast.error('Failed to load map');
-        setLoading(false);
-      }
-    };
-
-    initMap();
+      onLocationSelect({ lat: 37.86914, lng: -122.26003 });
+      setLoading(false);
+    }).catch(() => { setError('Failed to load map'); setLoading(false); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchInput.trim()) return;
-
+    if (!search.trim() || !mapInstanceRef.current) return;
+    setSearching(true);
     try {
       const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-          searchInput
-        )}&key=${apiKey}`
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(search)}&key=${apiKey}`
       );
-      const data = await response.json();
-
-      if (data.results && data.results.length > 0) {
+      const data = await res.json();
+      if (data.results?.[0]) {
         const { lat, lng } = data.results[0].geometry.location;
-        const location = { lat, lng, address: data.results[0].formatted_address };
-        
-        mapInstanceRef.current?.setCenter({ lat, lng });
-        mapInstanceRef.current?.setZoom(14);
-        
-        if (markerRef.current) {
-          markerRef.current.setPosition({ lat, lng });
-        } else {
-          markerRef.current = new google.maps.Marker({
-            position: { lat, lng },
-            map: mapInstanceRef.current,
-            title: location.address,
-          });
-        }
-        
-        onLocationSelect(location);
-        setSearchInput('');
-        toast.success('Location found');
-      } else {
-        toast.error('Location not found');
+        const address = data.results[0].formatted_address;
+        mapInstanceRef.current.panTo({ lat, lng });
+        mapInstanceRef.current.setZoom(14);
+        markerRef.current?.setPosition({ lat, lng });
+        onLocationSelect({ lat, lng, address });
+        setSearch('');
       }
-    } catch (error) {
-      toast.error('Search failed');
-    }
+    } finally { setSearching(false); }
   };
 
   return (
-    <div className="w-full h-full flex flex-col">
-      <form onSubmit={handleSearch} className="mb-4 flex gap-2">
-        <input
-          type="text"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search location..."
-          className="flex-1"
-        />
-        <button type="submit" className="btn btn-primary px-6">
-          Search
+    <div className="w-full h-full flex flex-col gap-3">
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <div className="relative flex-1">
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search any location..."
+            className="pl-9 pr-4 py-2.5 text-sm"
+            style={{ borderRadius: 10 }}
+          />
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
+          </svg>
+        </div>
+        <button type="submit" disabled={searching} className="btn btn-primary px-5 text-sm">
+          {searching ? '...' : 'Search'}
         </button>
       </form>
 
-      <div className="flex-1 relative rounded-lg overflow-hidden bg-gray-100">
-        <div ref={mapRef} className="w-full h-full" />
+      <div className="relative flex-1 rounded-xl overflow-hidden" style={{ minHeight: 300 }}>
+        <div ref={mapRef} className="w-full h-full" style={{ minHeight: 300 }} />
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-500 text-sm">
-            Loading map...
+          <div className="absolute inset-0 bg-zinc-100 flex items-center justify-center">
+            <div className="text-center">
+              <div className="shimmer w-12 h-12 rounded-full mx-auto mb-3" />
+              <p className="text-sm text-zinc-500">Loading map...</p>
+            </div>
+          </div>
+        )}
+        {error && (
+          <div className="absolute inset-0 bg-zinc-100 flex items-center justify-center">
+            <p className="text-sm text-red-500">{error}</p>
           </div>
         )}
       </div>

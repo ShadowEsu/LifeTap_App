@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import toast from 'react-hot-toast';
 import Header from '@/components/Header';
 import Navigation from '@/components/Navigation';
 
@@ -10,171 +9,140 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  loading?: boolean;
 }
+
+const SUGGESTIONS = [
+  'What should I do during an earthquake?',
+  'How do I create an emergency kit?',
+  'What are signs of a stroke?',
+  'Best practices for wildfire evacuation',
+];
 
 export default function AIAgentPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {}, []);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || loading) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+  const send = async (text: string) => {
+    if (!text.trim() || loading) return;
+    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, timestamp: new Date() };
+    const placeholder: Message = { id: 'loading', role: 'assistant', content: '', timestamp: new Date(), loading: true };
+    setMessages(prev => [...prev, userMsg, placeholder]);
     setInput('');
     setLoading(true);
 
     try {
       const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('Gemini API key not configured');
-      }
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: input }],
-              },
-            ],
+            system_instruction: { parts: [{ text: 'You are a helpful emergency safety assistant for LifeTap. Give concise, practical safety advice.' }] },
+            contents: [{ parts: [{ text }] }],
           }),
         }
       );
-
-      const data = await response.json();
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated',
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      toast.error('Failed to get response from AI');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleClearHistory = () => {
-    if (confirm('Clear chat history?')) {
-      setMessages([]);
-    }
+      const data = await res.json();
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response.';
+      setMessages(prev => prev.map(m => m.id === 'loading'
+        ? { id: Date.now().toString(), role: 'assistant', content: reply, timestamp: new Date() }
+        : m
+      ));
+    } catch {
+      setMessages(prev => prev.map(m => m.id === 'loading'
+        ? { id: Date.now().toString(), role: 'assistant', content: 'Error reaching AI. Please try again.', timestamp: new Date() }
+        : m
+      ));
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="flex h-screen bg-gradient-subtle">
+    <div className="flex h-screen bg-zinc-50">
       <Navigation />
-      
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        
-        <div className="flex-1 flex flex-col overflow-hidden p-6">
-          <div className="max-w-4xl mx-auto w-full h-full flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-3xl font-bold text-gray-900">AI Safety Assistant</h1>
-              {messages.length > 0 && (
-                <button
-                  onClick={handleClearHistory}
-                  className="btn btn-secondary text-sm"
-                >
-                  Clear History
-                </button>
-              )}
+        <div className="flex-1 flex flex-col overflow-hidden p-5">
+          <div className="max-w-2xl mx-auto w-full h-full flex flex-col gap-4">
+
+            <div>
+              <h1 className="text-2xl font-bold text-zinc-900">AI Safety Assistant</h1>
+              <p className="text-sm text-zinc-500 mt-0.5">Powered by Gemini</p>
             </div>
 
-            {/* Messages Area */}
-            <div className="card flex-1 overflow-y-auto mb-4 space-y-4">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
               {messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-center">
+                <div className="h-full flex flex-col items-center justify-center gap-6">
                   <div>
-                      <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                      Ask your safety questions
-                    </h2>
-                    <p className="text-gray-600">
-                      Get instant insights about emergency protocols, safety tips, and more
-                    </p>
+                    <div className="w-12 h-12 bg-zinc-900 rounded-2xl mx-auto mb-3 flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">AI</span>
+                    </div>
+                    <p className="text-zinc-500 text-sm text-center">Ask me anything about emergency safety</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 w-full">
+                    {SUGGESTIONS.map(s => (
+                      <button key={s} onClick={() => send(s)}
+                        className="text-left px-4 py-3 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-600 hover:border-zinc-400 hover:shadow-sm transition-all font-medium">
+                        {s}
+                      </button>
+                    ))}
                   </div>
                 </div>
               ) : (
-                messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-md px-4 py-3 rounded-lg ${
-                        message.role === 'user'
-                          ? 'bg-gray-900 text-white'
-                          : 'bg-gray-100 text-gray-900'
-                      }`}
-                    >
-                      <p className="text-sm">{message.content}</p>
-                      <p className={`text-xs mt-1 ${
-                        message.role === 'user'
-                          ? 'text-gray-400'
-                          : 'text-gray-500'
-                      }`}>
-                        {message.timestamp.toLocaleTimeString()}
-                      </p>
+                messages.map(msg => (
+                  <div key={msg.id} className={`flex fade-in ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-lg ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
+                      {msg.loading ? (
+                        <div className="bg-white border border-zinc-200 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+                          <div className="flex gap-1.5 items-center h-5">
+                            {[0, 1, 2].map(i => (
+                              <div key={i} className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"
+                                style={{ animationDelay: `${i * 0.15}s` }} />
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                          msg.role === 'user'
+                            ? 'bg-zinc-900 text-white rounded-br-sm'
+                            : 'bg-white text-zinc-900 border border-zinc-200 rounded-bl-sm'
+                        }`}>
+                          {msg.content}
+                        </div>
+                      )}
+                      <span className="text-xs text-zinc-400 px-1">
+                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
                   </div>
                 ))
               )}
-              {loading && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 px-4 py-3 rounded-lg">
-                    <div className="flex gap-2">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
+              <div ref={endRef} />
             </div>
 
-            {/* Input Area */}
-            <form onSubmit={handleSendMessage} className="card">
-              <div className="flex gap-2">
+            {/* Input */}
+            <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-3">
+              <form onSubmit={e => { e.preventDefault(); send(input); }} className="flex gap-2">
                 <input
-                  type="text"
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask a question..."
+                  onChange={e => setInput(e.target.value)}
+                  placeholder="Ask a safety question..."
                   disabled={loading}
-                  className="flex-1"
+                  className="flex-1 border-0 shadow-none text-sm focus:ring-0"
+                  style={{ boxShadow: 'none' }}
                 />
-                <button
-                  type="submit"
-                  disabled={loading || !input.trim()}
-                  className="btn btn-primary"
-                >
+                <button type="submit" disabled={loading || !input.trim()} className="btn btn-primary px-5">
                   {loading ? '...' : 'Send'}
                 </button>
-              </div>
-            </form>
+              </form>
+            </div>
+
           </div>
         </div>
       </div>
