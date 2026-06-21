@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Header from '@/components/Header';
-import MapPanel from '@/components/MapPanel';
 import RiskAssessment from '@/components/RiskAssessment';
 import NewsList from '@/components/NewsList';
 import Navigation from '@/components/Navigation';
+
+const MapPanel = dynamic(() => import('@/components/MapPanel'), { ssr: false });
 
 const SYSTEM_STATS = [
   { label: 'Uptime',       value: '14d 06h', mono: true },
