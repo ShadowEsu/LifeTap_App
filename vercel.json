@@ -1,0 +1,35 @@
+{
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/.next",
+  "installCommand": "npm install --legacy-peer-deps",
+  "framework": "nextjs",
+  "env": {
+    "NEXT_PUBLIC_API_URL": {
+      "description": "Backend API URL",
+      "required": true,
+      "default": "http://localhost:3001"
+    },
+    "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY": {
+      "description": "Google Maps API Key",
+      "required": true
+    },
+    "NEXT_PUBLIC_GEMINI_API_KEY": {
+      "description": "Gemini API Key",
+      "required": true
+    },
+    "NEXTAUTH_URL": {
+      "description": "Authentication URL",
+      "required": true
+    },
+    "NEXTAUTH_SECRET": {
+      "description": "NextAuth Secret (generate with openssl rand -hex 32)",
+      "required": true
+    }
+  },
+  "regions": ["iad1"],
+  "functions": {
+    "frontend/**/*.ts": {
+      "maxDuration": 60
+    }
+  }
+}
