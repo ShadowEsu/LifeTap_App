@@ -19,9 +19,20 @@ interface Alert {
   status: string;
 }
 
+interface WhatsAppMessage {
+  id: number;
+  from_number: string;
+  body: string;
+  lat: number | null;
+  lon: number | null;
+  has_coords: boolean;
+  received_at: string;
+}
+
 export default function HistoryPage() {
   const router = useRouter();
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [waMessages, setWaMessages] = useState<WhatsAppMessage[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,12 +46,16 @@ export default function HistoryPage() {
 
   const loadData = async () => {
     try {
-      const [alertsRes, statsRes] = await Promise.all([
+      const token = localStorage.getItem('auth_token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const [alertsRes, statsRes, waRes] = await Promise.all([
         alertsAPI.getAll(),
         historyAPI.getStats(),
+        fetch('/api/v1/whatsapp/messages', { headers }).then(r => r.json()),
       ]);
       setAlerts(alertsRes.data);
       setStats(statsRes.data);
+      setWaMessages(Array.isArray(waRes) ? waRes : []);
     } catch (error) {
       toast.error('Failed to load history');
     } finally {
@@ -130,6 +145,43 @@ export default function HistoryPage() {
                 </div>
               </div>
             )}
+
+            {/* WhatsApp Location Messages */}
+            <div className="card mb-6">
+              <h2 className="text-xl font-semibold mb-4">WhatsApp Location Messages</h2>
+              {loading ? (
+                <div className="text-center py-8 text-gray-500">Loading...</div>
+              ) : waMessages.filter(m => m.has_coords).length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No location messages yet</div>
+              ) : (
+                <div className="space-y-2">
+                  {waMessages.filter(m => m.has_coords).map((msg) => (
+                    <div key={msg.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded">
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">
+                          {format(new Date(msg.received_at), 'MMM dd, yyyy HH:mm:ss')}
+                        </div>
+                        <div className="text-sm text-gray-600 font-mono">
+                          {msg.lat!.toFixed(6)}, {msg.lon!.toFixed(6)}
+                        </div>
+                        <div className="text-xs text-gray-400 truncate max-w-md">{msg.body}</div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="badge badge-low">WhatsApp</span>
+                        <a
+                          href={`https://www.google.com/maps?q=${msg.lat},${msg.lon}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-secondary text-xs py-1 px-3"
+                        >
+                          Map
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Alerts List */}
             <div className="card">

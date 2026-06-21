@@ -21,6 +21,7 @@ import contactRoutes from './routes/contacts';
 import hardwareRoutes from './routes/hardware';
 import historyRoutes from './routes/history';
 import healthRoutes from './routes/health';
+import whatsappRoutes from './routes/whatsapp';
 
 export function createApp(): Application {
   const app = express();
@@ -86,6 +87,7 @@ export function createApp(): Application {
   app.use('/api/v1/contacts', contactRoutes);
   app.use('/api/v1/hardware', hardwareRoutes);
   app.use('/api/v1/history', historyRoutes);
+  app.use('/api/v1/whatsapp', whatsappRoutes);
 
   // ---- 404 Handler ----------------------------------------
   app.use(notFoundHandler);
