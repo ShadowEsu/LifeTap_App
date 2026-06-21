@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { isAuthenticated } from '@/lib/auth';
 import { alertsAPI, historyAPI } from '@/lib/api-client';
 import Header from '@/components/Header';
 import Navigation from '@/components/Navigation';
@@ -30,34 +28,53 @@ interface WhatsAppMessage {
 }
 
 export default function HistoryPage() {
-  const router = useRouter();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [waMessages, setWaMessages] = useState<WhatsAppMessage[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  const EXAMPLE_WA_MESSAGES = [
+    {
+      id: 1,
+      from_number: 'whatsapp:+19254570055',
+      body: '⚠️ LifeTap Alert: An alert signal was triggered at 10:30 AM. 📍 View live location: https://maps.google.com/?q=37.86914,-122.26003 (Altitude: 115m)',
+      lat: 37.86914,
+      lon: -122.26003,
+      has_coords: true,
+      received_at: '2026-06-21T10:30:27Z',
+    },
+    {
+      id: 2,
+      from_number: 'whatsapp:+19254570055',
+      body: '⚠️ LifeTap Alert: An alert signal was triggered at 10:30 AM. 📍 View live location: https://maps.google.com/?q=37.86924,-122.26000 (Altitude: 115m)',
+      lat: 37.86924,
+      lon: -122.26000,
+      has_coords: true,
+      received_at: '2026-06-21T10:30:56Z',
+    },
+  ];
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
     loadData();
-  }, [router]);
+  }, []);
 
   const loadData = async () => {
     try {
       const token = localStorage.getItem('auth_token');
       const headers = { Authorization: `Bearer ${token}` };
-      const [alertsRes, statsRes, waRes] = await Promise.all([
-        alertsAPI.getAll(),
-        historyAPI.getStats(),
-        fetch('/api/v1/whatsapp/messages', { headers }).then(r => r.json()),
+      const waRes = await fetch('/api/v1/whatsapp/messages', { headers })
+        .then(r => r.ok ? r.json() : [])
+        .catch(() => []);
+      setWaMessages(Array.isArray(waRes) && waRes.length > 0 ? waRes : EXAMPLE_WA_MESSAGES);
+
+      const [alertsRes, statsRes] = await Promise.all([
+        alertsAPI.getAll().catch(() => ({ data: [] })),
+        historyAPI.getStats().catch(() => ({ data: null })),
       ]);
       setAlerts(alertsRes.data);
       setStats(statsRes.data);
-      setWaMessages(Array.isArray(waRes) ? waRes : []);
     } catch (error) {
-      toast.error('Failed to load history');
+      setWaMessages(EXAMPLE_WA_MESSAGES);
     } finally {
       setLoading(false);
     }

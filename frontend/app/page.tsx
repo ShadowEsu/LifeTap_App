@@ -1,9 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
-import { isAuthenticated } from '@/lib/auth';
+import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import MapPanel from '@/components/MapPanel';
 import RiskAssessment from '@/components/RiskAssessment';
@@ -11,7 +8,6 @@ import NewsList from '@/components/NewsList';
 import Navigation from '@/components/Navigation';
 
 export default function Dashboard() {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
@@ -20,12 +16,9 @@ export default function Dashboard() {
   } | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
     setIsLoading(false);
-  }, [router]);
+    setSelectedLocation({ lat: 37.86914, lng: -122.26003 });
+  }, []);
 
   if (isLoading) {
     return (
