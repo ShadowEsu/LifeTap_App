@@ -1,68 +1,35 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
-import { getUser, clearAuthToken } from '@/lib/auth';
+import { usePathname } from 'next/navigation';
 
 export default function Header() {
-  const router = useRouter();
-  const user = getUser();
-
-  const handleLogout = () => {
-    clearAuthToken();
-    toast.success('Logged out');
-    router.push('/login');
-  };
+  const pathname = usePathname();
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
-      <div className="flex items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="text-2xl font-bold gradient-text">LifeTap</div>
-        </Link>
-        
-        <div className="flex items-center gap-6">
-          <nav className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="text-gray-600 hover:text-gray-900 font-medium"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/ai-agent"
-              className="text-gray-600 hover:text-gray-900 font-medium"
-            >
-              AI Agent
-            </Link>
-            <Link
-              href="/history"
-              className="text-gray-600 hover:text-gray-900 font-medium"
-            >
-              History
-            </Link>
-            <Link
-              href="/emergency-contacts"
-              className="text-gray-600 hover:text-gray-900 font-medium"
-            >
-              Contacts
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-3 pl-6 border-l border-gray-200">
-            {user && (
-              <span className="text-sm text-gray-600">{user.email}</span>
-            )}
-            <button
-              onClick={handleLogout}
-              className="btn btn-secondary text-sm"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </div>
+    <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+      <Link href="/" className="text-xl font-bold tracking-tight text-gray-900">
+        LifeTap
+      </Link>
+      <nav className="flex items-center gap-5 text-sm font-medium">
+        {[
+          { href: '/',                   label: 'Dashboard' },
+          { href: '/history',            label: 'History' },
+          { href: '/whatsapp',           label: 'WhatsApp' },
+          { href: '/emergency-contacts', label: 'Contacts' },
+          { href: '/ai-agent',           label: 'AI' },
+        ].map(({ href, label }) => (
+          <Link
+            key={href}
+            href={href}
+            className={`transition-colors ${
+              pathname === href ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
     </header>
   );
 }

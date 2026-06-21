@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { isAuthenticated } from '@/lib/auth';
 import Header from '@/components/Header';
 import Navigation from '@/components/Navigation';
 
@@ -15,17 +13,12 @@ interface Message {
 }
 
 export default function AIAgentPage() {
-  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
   }, [router]);
 
   useEffect(() => {

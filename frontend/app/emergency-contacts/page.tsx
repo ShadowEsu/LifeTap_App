@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { isAuthenticated } from '@/lib/auth';
 import { contactsAPI } from '@/lib/api-client';
 import Header from '@/components/Header';
 import Navigation from '@/components/Navigation';
@@ -17,17 +15,12 @@ interface Contact {
 }
 
 export default function EmergencyContactsPage() {
-  const router = useRouter();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [newContact, setNewContact] = useState({ name: '', phone: '', risk_threshold: 'high' });
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
     loadContacts();
   }, [router]);
 
