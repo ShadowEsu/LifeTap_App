@@ -160,13 +160,14 @@ export default function MapPanel({ onLocationSelect }: MapPanelProps) {
         </button>
       </form>
 
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center text-gray-500">
-          Loading map...
-        </div>
-      ) : (
-        <div ref={mapRef} className="flex-1 rounded-lg overflow-hidden bg-gray-200" />
-      )}
+      <div className="flex-1 relative rounded-lg overflow-hidden bg-gray-100">
+        <div ref={mapRef} className="w-full h-full" />
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-500 text-sm">
+            Loading map...
+          </div>
+        )}
+      </div>
     </div>
   );
 }
