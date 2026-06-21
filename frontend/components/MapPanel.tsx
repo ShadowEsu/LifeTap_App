@@ -31,15 +31,21 @@ export default function MapPanel({ onLocationSelect }: MapPanelProps) {
         });
 
         const { Map } = await loader.importLibrary('maps');
-        const { AdvancedMarkerElement } = await loader.importLibrary('marker');
 
         if (!mapRef.current) return;
 
         mapInstanceRef.current = new Map(mapRef.current, {
           zoom: 12,
-          center: { lat: 37.7749, lng: -122.4194 }, // Default to San Francisco
-          mapId: 'lifechain-map',
+          center: { lat: 37.86914, lng: -122.26003 },
         });
+
+        // Show example alert location
+        new google.maps.Marker({
+          position: { lat: 37.86914, lng: -122.26003 },
+          map: mapInstanceRef.current,
+          title: 'LifeTap Alert',
+        });
+        onLocationSelect({ lat: 37.86914, lng: -122.26003 });
 
         // Get user's location
         if (navigator.geolocation) {
@@ -96,7 +102,7 @@ export default function MapPanel({ onLocationSelect }: MapPanelProps) {
     };
 
     initMap();
-  }, [onLocationSelect]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
