@@ -10,8 +10,8 @@ const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_PHONE = process.env.TWILIO_PHONE_NUMBER || 'whatsapp:+16892644297';
 
-// Base64 encode credentials for Basic Auth
-const twilioAuth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
+const TWILIO_SID = TWILIO_ACCOUNT_SID ?? '';
+const TWILIO_TOKEN = TWILIO_AUTH_TOKEN ?? '';
 
 // Fetch WhatsApp chat history
 router.get('/history', async (req: Request, res: Response) => {
@@ -22,11 +22,11 @@ router.get('/history', async (req: Request, res: Response) => {
 
     // Fetch messages from Twilio API
     const response = await axios.get(
-      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`,
       {
         auth: {
-          username: TWILIO_ACCOUNT_SID,
-          password: TWILIO_AUTH_TOKEN
+          username: TWILIO_SID,
+          password: TWILIO_TOKEN
         },
         params: {
           limit: 100,
@@ -80,7 +80,7 @@ router.post('/send', async (req: Request, res: Response) => {
     logger.info(`Sending WhatsApp message to: ${toWhatsApp}`);
 
     const response = await axios.post(
-      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`,
       {
         From: TWILIO_PHONE,
         To: toWhatsApp,
@@ -88,8 +88,8 @@ router.post('/send', async (req: Request, res: Response) => {
       },
       {
         auth: {
-          username: TWILIO_ACCOUNT_SID,
-          password: TWILIO_AUTH_TOKEN
+          username: TWILIO_SID,
+          password: TWILIO_TOKEN
         },
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
@@ -191,11 +191,11 @@ router.get('/messages', async (req: Request, res: Response) => {
 router.get('/unread', async (req: Request, res: Response) => {
   try {
     const response = await axios.get(
-      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`,
       {
         auth: {
-          username: TWILIO_ACCOUNT_SID,
-          password: TWILIO_AUTH_TOKEN
+          username: TWILIO_SID,
+          password: TWILIO_TOKEN
         },
         params: {
           limit: 100

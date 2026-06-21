@@ -12,15 +12,12 @@ let pool: Pool | null = null;
 export function getPool(): Pool {
   if (!pool) {
     pool = new Pool({
-      connectionString: config.database.url,
-      min: config.database.poolMin,
-      max: config.database.poolMax,
-      idleTimeoutMillis: config.database.poolIdleTimeoutMs,
-      connectionTimeoutMillis: config.database.connectionTimeoutMs,
-      ssl:
-        config.server.isProduction
-          ? { rejectUnauthorized: true }
-          : false,
+      connectionString: config.DATABASE_URL,
+      min: 2,
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
+      ssl: config.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     });
 
     pool.on('error', (err) => {

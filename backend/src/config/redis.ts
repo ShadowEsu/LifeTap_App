@@ -11,8 +11,8 @@ let redisClient: Redis | null = null;
 
 export function getRedisClient(): Redis {
   if (!redisClient) {
-    redisClient = new Redis(config.redis.url, {
-      keyPrefix: config.redis.keyPrefix,
+    redisClient = new Redis(config.REDIS_URL, {
+      keyPrefix: 'lifetap:',
       retryStrategy: (times: number) => {
         // Exponential backoff: max 30 seconds
         const delay = Math.min(times * 500, 30000);

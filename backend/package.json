@@ -39,6 +39,10 @@
     "tsx": "^4.7.0",
     "ts-node": "^10.9.2",
     "@types/cors": "^2.8.17",
-    "@types/morgan": "^1.9.9"
+    "@types/morgan": "^1.9.9",
+    "@types/uuid": "^9.0.7",
+    "@types/ws": "^8.5.10",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/bcryptjs": "^2.4.6"
   }
 }
