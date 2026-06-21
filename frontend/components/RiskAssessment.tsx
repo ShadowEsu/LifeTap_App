@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
 
 interface RiskAssessmentProps {
   location: { lat: number; lng: number; address?: string } | null;
@@ -14,199 +13,131 @@ interface RiskData {
   reasons: string[];
 }
 
+const LEVEL_COLOR = {
+  high:   { text: 'text-red-600',   bar: 'bg-red-500',   badge: 'badge-high'   },
+  medium: { text: 'text-amber-600', bar: 'bg-amber-500', badge: 'badge-medium' },
+  low:    { text: 'text-green-600', bar: 'bg-green-500', badge: 'badge-low'    },
+};
+
 export default function RiskAssessment({ location }: RiskAssessmentProps) {
   const [risk, setRisk] = useState<RiskData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
 
   useEffect(() => {
-    if (!location) {
-      setRisk(null);
-      return;
-    }
+    if (!location) { setRisk(null); return; }
 
-    const assessRisk = async () => {
+    const run = async () => {
       setLoading(true);
+      setErr('');
       try {
         const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-        if (!apiKey) {
-          toast.error('Gemini API key not configured');
-          setLoading(false);
-          return;
-        }
+        if (!apiKey) { setErr('Gemini API key not configured'); setLoading(false); return; }
 
-        const prompt = `Analyze the safety risk level for coordinates: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}${
+        const prompt = `You are an emergency risk assessment system. Analyze the safety risk for GPS coordinates: ${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}${
           location.address ? ` (${location.address})` : ''
-        }. 
+        }.
 
-Consider factors like:
-- Natural disaster zones (earthquakes, floods, wildfires)
-- Crime statistics for major cities
-- Geographic isolation/accessibility
-- Time of day implications
-- Infrastructure proximity (hospitals, police)
+Consider: natural disaster zones (seismic activity, flood plains, wildfire risk), crime statistics, geographic isolation, proximity to hospitals/emergency services, infrastructure density.
 
-Respond in JSON format:
-{
-  "level": "low|medium|high",
-  "percentage": 0-100,
-  "description": "Brief description",
-  "reasons": ["reason1", "reason2", "reason3"]
-}`;
+Respond ONLY with valid JSON, no markdown fences:
+{"level":"low|medium|high","percentage":0-100,"description":"one concise sentence","reasons":["factor 1","factor 2","factor 3"]}`;
 
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [{ text: prompt }],
-                },
-              ],
-            }),
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
           }
         );
-
-        const data = await response.json();
-        const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        
-        // Extract JSON from response
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const riskData = JSON.parse(jsonMatch[0]);
-          setRisk(riskData);
-        }
-      } catch (error) {
-        console.error('Risk assessment error:', error);
-        // Fallback: random risk for demo
-        setRisk({
-          level: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as 'low' | 'medium' | 'high',
-          percentage: Math.floor(Math.random() * 100),
-          description: 'Unable to assess risk at this time',
-          reasons: ['API unavailable', 'Using fallback assessment'],
-        });
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const match = text.match(/\{[\s\S]*\}/);
+        if (match) setRisk(JSON.parse(match[0]));
+        else setErr('Could not parse AI response');
+      } catch {
+        setErr('AI assessment unavailable');
       } finally {
         setLoading(false);
       }
     };
 
-    assessRisk();
+    run();
   }, [location]);
-
-  const getRiskColor = (level: string) => {
-    switch (level) {
-      case 'high':
-        return 'text-red-600';
-      case 'medium':
-        return 'text-amber-600';
-      case 'low':
-        return 'text-green-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
-
-  const getRiskBgColor = (level: string) => {
-    switch (level) {
-      case 'high':
-        return 'bg-red-50 border-red-200';
-      case 'medium':
-        return 'bg-amber-50 border-amber-200';
-      case 'low':
-        return 'bg-green-50 border-green-200';
-      default:
-        return 'bg-gray-50 border-gray-200';
-    }
-  };
 
   if (!location) {
     return (
       <div className="card">
-        <h3 className="text-lg font-semibold mb-4 text-gray-900">
-          Danger Assessment
-        </h3>
-        <div className="text-center py-8 text-gray-500">
-          Select a location on the map to assess risk level
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold mono text-zinc-900">DANGER ASSESSMENT</h3>
+          <span className="badge badge-info">AI</span>
+        </div>
+        <div className="terminal text-xs py-6 text-center">
+          <p className="dim">$ awaiting_location_input</p>
+          <p className="mt-1 cursor-blink">Select a map point to begin analysis</p>
         </div>
       </div>
     );
   }
 
+  const colors = risk ? LEVEL_COLOR[risk.level] : LEVEL_COLOR.medium;
+
   return (
-    <div className={`card border-2 ${getRiskBgColor(risk?.level || 'medium')}`}>
-      <h3 className="text-lg font-semibold mb-4 text-gray-900">
-        Danger Assessment
-      </h3>
+    <div className="card">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold mono text-zinc-900">DANGER ASSESSMENT</h3>
+        {risk && <span className={`badge ${colors.badge}`}>{risk.level}</span>}
+        {loading && <span className="badge badge-info">Analyzing...</span>}
+      </div>
 
       {loading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin text-2xl mb-2">⌛</div>
-          <div className="text-gray-600">Analyzing location...</div>
+        <div className="terminal text-xs py-4">
+          <p className="dim">$ gemini-2.0-flash --model risk_analysis</p>
+          <p className="green mt-1">Fetching seismic data...</p>
+          <p className="green">Cross-referencing crime index...</p>
+          <p className="green">Checking hospital proximity...</p>
+          <p className="hi mt-1 cursor-blink">Running inference</p>
+        </div>
+      ) : err ? (
+        <div className="terminal text-xs py-3">
+          <p className="red">Error: {err}</p>
         </div>
       ) : risk ? (
-        <div className="space-y-4">
-          {/* Percentage Circle */}
-          <div className="flex items-center justify-center">
-            <div className="relative w-32 h-32">
-              <svg className="transform -rotate-90" viewBox="0 0 120 120">
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="54"
-                  fill="none"
-                  stroke="#e5e7eb"
-                  strokeWidth="8"
-                />
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="54"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="8"
-                  strokeDasharray={`${(risk.percentage / 100) * 339.3} 339.3`}
-                  className={getRiskColor(risk.level)}
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <div className={`text-3xl font-bold ${getRiskColor(risk.level)}`}>
-                    {risk.percentage}%
-                  </div>
-                  <div className="text-xs text-gray-600 uppercase font-semibold mt-1">
-                    {risk.level}
-                  </div>
-                </div>
-              </div>
+        <div className="space-y-3">
+          {/* Gauge bar */}
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-xs text-zinc-500 mono">Risk Score</span>
+              <span className={`text-lg font-bold mono ${colors.text}`}>{risk.percentage}%</span>
+            </div>
+            <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${colors.bar}`}
+                style={{ width: `${risk.percentage}%` }}
+              />
             </div>
           </div>
 
           {/* Description */}
-          <div>
-            <p className="text-sm text-gray-700 text-center">
-              {risk.description}
-            </p>
+          <p className="text-xs text-zinc-600 leading-relaxed">{risk.description}</p>
+
+          {/* Factors */}
+          <div className="terminal text-xs">
+            <p className="dim mb-1">$ risk_factors --verbose</p>
+            {risk.reasons.map((r, i) => (
+              <p key={i} className="green">+ {r}</p>
+            ))}
           </div>
 
-          {/* Reasons */}
-          {risk.reasons && risk.reasons.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-gray-600 mb-2">Factors:</p>
-              <ul className="space-y-1">
-                {risk.reasons.map((reason, idx) => (
-                  <li key={idx} className="text-xs text-gray-600 flex items-start gap-2">
-                    <span className="text-primary mt-1">•</span>
-                    <span>{reason}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Coordinates */}
-          <div className="text-xs text-gray-500 text-center bg-white/50 p-2 rounded">
-            {location.address || `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`}
+          {/* Coords */}
+          <div className="flex items-center gap-1.5 text-xs mono text-zinc-400 bg-zinc-50 rounded-lg px-3 py-2">
+            <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="truncate">{location.address || `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`}</span>
           </div>
         </div>
       ) : null}
