@@ -37,6 +37,8 @@
     "@types/pg": "^8.11.2",
     "@types/bcryptjs": "^2.4.6",
     "tsx": "^4.7.0",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "@types/cors": "^2.8.17",
+    "@types/morgan": "^1.9.9"
   }
 }
